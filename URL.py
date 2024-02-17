@@ -21,6 +21,12 @@ class URL:
 			self.port = int(port)
 
 	def request(self):
+		request_headers = {'Host': self.host, 'Connection': 'close'}
+		request = f"GET {self.path} HTTP/1.0\r\n"
+		for header, header_value in request_headers.items():
+			request += f"{header}: {header_value}\r\n"
+		request += "\r\n\r\n"
+		
 		s = socket.socket(
 			family=socket.AF_INET,
 			type=socket.SOCK_STREAM,
@@ -30,9 +36,7 @@ class URL:
 			ctx = ssl.create_default_context()
 			s = ctx.wrap_socket(s, server_hostname=self.host)
 		s.connect((self.host, self.port))
-		s.send(("GET {} HTTP/1.0\r\n".format(self.path) + \
-		"Host: {}\r\n\r\n".format(self.host)) \
-		.encode("utf8"))
+		s.send(request.encode('utf8'))
 
 		response = s.makefile("r", encoding="utf8", newline="\r\n")
 		statusline = response.readline()
