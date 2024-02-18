@@ -20,4 +20,4 @@ class Browser:
 
 if __name__ == "__main__":
 	browser = Browser()
-	browser.load(URL())
+	browser.load(URL("data:text/html, <div>Hello world</div>"))

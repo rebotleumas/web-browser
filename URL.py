@@ -2,37 +2,45 @@ import socket
 import ssl
 
 class URL:
-	def __init__(self, url): 
-		self.scheme, url = url.split("://", 1)
-		assert self.scheme in ["http", "https", "file"]
+	def __init__(self, url="file://C:/Users/samue/Documents/Projects/WebBrowser/test_file.txt"): 
+		if "://" in url:
+			self.scheme, url = url.split("://", 1)
+		else:
+			self.scheme, url = url.split(":", 1)
+		assert self.scheme in ["http", "https", "file", "data"]
 		if "/" not in url:
 			url = url + "/"
 
-		self.host, url = url.split("/", 1)
-		self.path = "/" + url if self.scheme != "file" else url
+		if self.scheme in ["http", "https"]:
+			self.host, url = url.split("/", 1)
+			self.path = "/" + url
 
-		if self.scheme == "http":
-			self.port = 80
-		elif self.scheme == "https":
-			self.port = 443
+			if self.scheme == "http":
+				self.port = 80
+			elif self.scheme == "https":
+				self.port = 443
 
-		if ":" in self.host: 
-			self.host, port = self.host.split(":", 1)
-			self.port = int(port)
+			if ":" in self.host: 
+				self.host, port = self.host.split(":", 1)
+				self.port = int(port)
 
-	def __init__(self):
-		self.scheme = "file"
-		self.path = "C:/Users/samue/Documents/Projects/WebBrowser/test_file.txt"
+		if self.scheme == "file":
+			self.path = url
+
+		if self.scheme == "data":
+			self.mediatype, self.html_data = url.split(",", 1)
+			assert self.mediatype == "text/html"
 
 	def request(self) -> str:
 		body = ''
 		if self.scheme == "file":
-			print(f"Reading file {self.path}")
 			try:
 				with open(self.path) as f: body = f.read()
 			except (FileNotFoundError, IOError):
 				return 'Incorrect file or non-existent file path!'
 
+		elif self.scheme == "data":
+			body = self.html_data
 		else:
 			request_headers = {'Host': self.host, 'Connection': 'close', 'User-Agent': 'Bowser'}
 			request = f"GET {self.path} HTTP/1.0\r\n"
