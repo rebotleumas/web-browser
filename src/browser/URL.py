@@ -71,25 +71,27 @@ class URL:
 			s.send(request.encode('utf8'))
 
 			response = s.makefile("r", encoding="utf8", newline="\r\n")
-			statusline = response.readline()
-			version, status, explanation = statusline.split(" ", 2)
-			response_headers = {}
 
-			while True:
-				line = response.readline()
-				if line == "\r\n": break
-				header, value = line.split(":", 1)
-				response_headers[header.casefold()] = value.strip()
+			return response
 
-				assert "transfer-encoding" not in response_headers
-				assert "content-encoding" not in response_headers
+	def parse_response(self, response):
+		statusline = response.readline()
+		version, status, explanation = statusline.split(" ", 2)
+		response_headers = {}
+		while True:
+			line = response.readline()
+			if line == "\r\n": break
+			header, value = line.split(":", 1)
+			response_headers[header.casefold()] = value.strip()
 
-				s.close()
-			content_length = int(response_headers['content-length'])
+			assert "transfer-encoding" not in response_headers
+			assert "content-encoding" not in response_headers
 
-			body = response.read()
-			if self.scheme == "view-source":
-				body.replace("<", "&lt;")
-				body.replace(">", "&gt;")
+		content_length = int(response_headers['content-length'])
+
+		body = response.read()
+		if self.scheme == "view-source":
+			body.replace("<", "&lt;")
+			body.replace(">", "&gt;")
 
 		return body[:content_length]

@@ -27,7 +27,8 @@ class Browser:
 			idx += 1
 
 	def load(self, url):
-		body = url.request()
+		response = url.request()
+		body = url.parse_response(response)
 		self.show(body)
 
 if __name__ == "__main__":
