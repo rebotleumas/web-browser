@@ -32,4 +32,4 @@ class Browser:
 
 if __name__ == "__main__":
 	browser = Browser()
-	browser.load(URL("view-source:http://example.org/"))
+	browser.load(URL("https://example.org/"))

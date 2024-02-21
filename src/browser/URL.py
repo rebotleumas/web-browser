@@ -4,7 +4,6 @@ import ssl
 class URL:
 	def __init__(self, url="file://C:/Users/samue/Documents/Projects/WebBrowser/test_file.txt"): 
 		self.scheme, new_url = url.split(":", 1)
-		print(self.scheme, new_url)
 		assert self.scheme in ["http", "https", "file", "data", "view-source"]
 
 		if self.scheme in ["http", "https"]:
@@ -19,6 +18,8 @@ class URL:
 
 		if self.scheme == "view-source":
 			self.parse_http(new_url)
+
+		self.socket_cache = {}
 
 	def parse_http(self, url):
 		scheme, url = url.split("://", 1)
@@ -47,32 +48,36 @@ class URL:
 		elif self.scheme == "data":
 			body = self.html_data
 		else:
-			request_headers = {'Host': self.host, 'Connection': 'close', 'User-Agent': 'Bowser'}
+			request_headers = {'Host': self.host, 'User-Agent': 'Bowser'}
 			request = f"GET {self.path} HTTP/1.0\r\n"
 			for header, header_value in request_headers.items():
 				request += f"{header}: {header_value}\r\n"
 			request += "\r\n\r\n"
 
-			s = socket.socket(
-				family=socket.AF_INET,
-				type=socket.SOCK_STREAM,
-				proto=socket.IPPROTO_TCP,
-			)
-			if self.scheme == 'https':
-				ctx = ssl.create_default_context()
-				s = ctx.wrap_socket(s, server_hostname=self.host)
-			s.connect((self.host, self.port))
+			if (self.host + str(self.port)) in self.socket_cache:
+				s = self.socket_cache[self.host + str(self.port)]
+			else:
+				s = socket.socket(
+					family=socket.AF_INET,
+					type=socket.SOCK_STREAM,
+					proto=socket.IPPROTO_TCP,
+				)
+				if self.scheme == 'https':
+					ctx = ssl.create_default_context()
+					s = ctx.wrap_socket(s, server_hostname=self.host)
+
+				s.connect((self.host, self.port))
+				self.socket_cache[self.host + str(self.port)] = s
 			s.send(request.encode('utf8'))
 
 			response = s.makefile("r", encoding="utf8", newline="\r\n")
 			statusline = response.readline()
 			version, status, explanation = statusline.split(" ", 2)
 			response_headers = {}
-			body = response.read()
 
 			while True:
 				line = response.readline()
-				if line == "\r\n" or line == "": break
+				if line == "\r\n": break
 				header, value = line.split(":", 1)
 				response_headers[header.casefold()] = value.strip()
 
@@ -80,10 +85,11 @@ class URL:
 				assert "content-encoding" not in response_headers
 
 				s.close()
+			content_length = int(response_headers['content-length'])
 
+			body = response.read()
 			if self.scheme == "view-source":
-				print(body)
 				body.replace("<", "&lt;")
 				body.replace(">", "&gt;")
 
-		return body
+		return body[:content_length]
