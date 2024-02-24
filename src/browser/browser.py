@@ -37,4 +37,4 @@ class Browser:
 
 if __name__ == "__main__":
     browser = Browser()
-    browser.load(URL("http://browser.engineering/redirect"))
+    browser.load(URL("http://example.org/"))

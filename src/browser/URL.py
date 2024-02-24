@@ -1,5 +1,6 @@
 import socket
 import ssl
+import time
 
 
 class URL:
@@ -23,8 +24,10 @@ class URL:
             self.parse_http(new_url)
 
         self.socket_cache = {}
+        self.response_cache = {}
         self.redirects = 0
         self.MAX_REDIRECTS = 5
+        self.cache_max_age = 100
 
     def parse_http(self, url):
         scheme, url = url.split("://", 1)
@@ -59,33 +62,44 @@ class URL:
                 "User-Agent": "Bowser",
                 "Connection": "Keep-Alive",
                 "Keep-Alive": "timeout=1, max=1",
+                "Cache-Control": f"max-age: {self.cache_max_age}"
             }
             request = f"GET {self.path} HTTP/1.0\r\n"
             for header, header_value in request_headers.items():
                 request += f"{header}: {header_value}\r\n"
+
             request += "\r\n\r\n"
+            request = request.encode("utf8")
+            request_hash = hash(request)
 
-            if (self.host + str(self.port)) in self.socket_cache:
-                s = self.socket_cache[self.host + str(self.port)]
+            if request_hash in self.response_cache:
+            	time_elapsed = time.time() - self.response_cache[request_hash][1]
+            	if time_elapsed <= self.cache_max_age:
+            		return self.response_cache[request_hash]
             else:
-                s = socket.socket(
-                    family=socket.AF_INET,
-                    type=socket.SOCK_STREAM,
-                    proto=socket.IPPROTO_TCP,
-                )
-                if self.scheme == "https":
-                    ctx = ssl.create_default_context()
-                    s = ctx.wrap_socket(s, server_hostname=self.host)
+	            if (self.host + str(self.port)) in self.socket_cache:
+	                s = self.socket_cache[self.host + str(self.port)]
+	            else:
+	                s = socket.socket(
+	                    family=socket.AF_INET,
+	                    type=socket.SOCK_STREAM,
+	                    proto=socket.IPPROTO_TCP,
+	                )
+	                if self.scheme == "https":
+	                    ctx = ssl.create_default_context()
+	                    s = ctx.wrap_socket(s, server_hostname=self.host)
 
-                s.connect((self.host, self.port))
-                self.socket_cache[self.host + str(self.port)] = s
+	                s.connect((self.host, self.port))
+	                self.socket_cache[self.host + str(self.port)] = s
 
-            s.send(request.encode("utf8"))
-            response = s.makefile("r", encoding="utf8", newline="\r\n")
+	            s.send(request)
+	            response = s.makefile("r", encoding="utf8", newline="\r\n")
+	            s.close()
+	            body = self.parse_response(response, request_hash)
 
-            return self.parse_response(response)
+	            return body
 
-    def parse_response(self, response):
+    def parse_response(self, response, request_hash):
         statusline = response.readline()
         version, status, explanation = statusline.split(" ", 2)
 
@@ -108,15 +122,21 @@ class URL:
             self.scheme, _ = redirect_url.split(":", 1)
             self.parse_http(redirect_url)
             return self.request()
+        elif int(status) > 400:
+        	raise Exception
         else:
             content_length = (
                 int(response_headers["content-length"])
                 if "content-length" in response_headers
                 else -1
             )
-            body = response.read()
+
+            body = response.read(content_length)
             if self.scheme == "view-source":
                 body.replace("<", "&lt;")
                 body.replace(">", "&gt;")
 
-            return body[:content_length]
+            body = body[:content_length]
+            self.response_cache[request_hash] = (body, time.time())
+
+            return body
