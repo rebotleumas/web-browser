@@ -18,9 +18,15 @@ class Browser:
         self.canvas.pack()
         self.scroll = 0
         self.window.bind("<Down>", self.scrolldown)
+        self.window.bind("<Up>", self.scrollup)
 
     def scrolldown(self, e):
     	self.scroll += SCROLL_STEP
+    	self.draw()
+
+    def scrollup(self, e):
+    	self.scroll -= SCROLL_STEP
+    	self.scroll = max(self.scroll, 0)
     	self.draw()
 
     def lex(self, body):
@@ -62,7 +68,7 @@ class Browser:
     	for x, y, c in self.display_list:
     	    if y - self.scroll > HEIGHT: continue
     	    if y < VSTEP - self.scroll: continue
-    	    self.canvas.create_text(x, y - self.scroll, text=c)
+    	    self.canvas.create_text(x, y - self.scroll , text=c)
 
     def layout(self, text):
         cursor_x, cursor_y = HSTEP, VSTEP
