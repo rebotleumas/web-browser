@@ -136,7 +136,6 @@ class URL:
                 body.replace("<", "&lt;")
                 body.replace(">", "&gt;")
 
-            body = body[:content_length]
             self.response_cache[request_hash] = (body, time.time())
 
             return body
