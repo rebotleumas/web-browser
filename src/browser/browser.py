@@ -19,6 +19,7 @@ class Browser:
         self.scroll = 0
         self.window.bind("<Down>", self.scrolldown)
         self.window.bind("<Up>", self.scrollup)
+        self.window.bind("<MouseWheel>", self.handle_mousewheel)
 
     def scrolldown(self, e):
     	self.scroll += SCROLL_STEP
@@ -26,6 +27,11 @@ class Browser:
 
     def scrollup(self, e):
     	self.scroll -= SCROLL_STEP
+    	self.scroll = max(self.scroll, 0)
+    	self.draw()
+
+    def handle_mousewheel(self, e):
+    	self.scroll += e.delta
     	self.scroll = max(self.scroll, 0)
     	self.draw()
 
