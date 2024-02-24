@@ -3,6 +3,8 @@ import tkinter
 
 WIDTH, HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
+SCROLL_STEP = 20
+NEW_LINE = 20
 
 class Browser:
     def __init__(self):
@@ -18,7 +20,7 @@ class Browser:
         self.window.bind("<Down>", self.scrolldown)
 
     def scrolldown(self, e):
-    	self.scroll += VSTEP
+    	self.scroll += SCROLL_STEP
     	self.draw()
 
     def lex(self, body):
@@ -58,17 +60,21 @@ class Browser:
     def draw(self):
     	self.canvas.delete("all")
     	for x, y, c in self.display_list:
-    		if y - self.scroll > HEIGHT: continue
-    		if y < VSTEP - self.scroll: continue
+    	    if y - self.scroll > HEIGHT: continue
+    	    if y < VSTEP - self.scroll: continue
     	    self.canvas.create_text(x, y - self.scroll, text=c)
 
     def layout(self, text):
         cursor_x, cursor_y = HSTEP, VSTEP
         display_list = []
-        for c in text:
-            display_list.append((cursor_x, cursor_y, c))
+        for char in text:
+            display_list.append((cursor_x, cursor_y, char))
             
             cursor_x += HSTEP
+            if char == '\n':
+                cursor_x = HSTEP
+                cursor_y += NEW_LINE
+
             if cursor_x >= WIDTH - HSTEP:
                 cursor_y += VSTEP
                 cursor_x = HSTEP

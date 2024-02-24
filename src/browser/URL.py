@@ -23,7 +23,6 @@ class URL:
         if self.scheme == "view-source":
             self.parse_http(new_url)
 
-        self.socket_cache = {}
         self.response_cache = {}
         self.redirects = 0
         self.MAX_REDIRECTS = 5
@@ -60,8 +59,7 @@ class URL:
             request_headers = {
                 "Host": self.host,
                 "User-Agent": "Bowser",
-                "Connection": "Keep-Alive",
-                "Keep-Alive": "timeout=1, max=1",
+                "Connection": "Close",
                 "Cache-Control": f"max-age: {self.cache_max_age}"
             }
             request = f"GET {self.path} HTTP/1.0\r\n"
@@ -77,27 +75,22 @@ class URL:
             	if time_elapsed <= self.cache_max_age:
             		return self.response_cache[request_hash]
             else:
-	            if (self.host + str(self.port)) in self.socket_cache:
-	                s = self.socket_cache[self.host + str(self.port)]
-	            else:
-	                s = socket.socket(
-	                    family=socket.AF_INET,
-	                    type=socket.SOCK_STREAM,
-	                    proto=socket.IPPROTO_TCP,
-	                )
-	                if self.scheme == "https":
-	                    ctx = ssl.create_default_context()
-	                    s = ctx.wrap_socket(s, server_hostname=self.host)
+                s = socket.socket(
+                    family=socket.AF_INET,
+                    type=socket.SOCK_STREAM,
+                    proto=socket.IPPROTO_TCP,
+                )
+                if self.scheme == "https":
+                    ctx = ssl.create_default_context()
+                    s = ctx.wrap_socket(s, server_hostname=self.host)
 
-	                s.connect((self.host, self.port))
-	                self.socket_cache[self.host + str(self.port)] = s
+                s.connect((self.host, self.port))
 
-	            s.send(request)
-	            response = s.makefile("r", encoding="utf8", newline="\r\n")
-	            s.close()
-	            body = self.parse_response(response, request_hash)
+            s.send(request)
+            response = s.makefile("r", encoding="utf8", newline="\r\n")
+            body = self.parse_response(response, request_hash)
 
-	            return body
+            return body
 
     def parse_response(self, response, request_hash):
         statusline = response.readline()
@@ -108,6 +101,7 @@ class URL:
             line = response.readline()
             if line == "\r\n":
                 break
+
             header, value = line.split(":", 1)
             response_headers[header.casefold()] = value.strip()
 
@@ -130,7 +124,6 @@ class URL:
                 if "content-length" in response_headers
                 else -1
             )
-
             body = response.read(content_length)
             if self.scheme == "view-source":
                 body.replace("<", "&lt;")
