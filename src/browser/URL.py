@@ -5,10 +5,11 @@ import time
 
 class URL:
     def __init__(
-        self, url="file://C:/Users/samue/Documents/Projects/WebBrowser/test_file.txt"
+        self, url="about:blank"
     ):
-        self.scheme, new_url = url.split(":", 1)
-        assert self.scheme in ["http", "https", "file", "data", "view-source"]
+        self.scheme, self.new_url = url.split(":", 1)
+        print(self.scheme)
+        assert self.scheme in ["http", "https", "file", "data", "view-source", "about"]
 
         if self.scheme in ["http", "https"]:
             self.parse_http(url)
@@ -17,11 +18,11 @@ class URL:
             _, self.path = url.split("://")
 
         if self.scheme == "data":
-            self.mediatype, self.html_data = new_url.split(",", 1)
+            self.mediatype, self.html_data = self.new_url.split(",", 1)
             assert self.mediatype == "text/html"
 
         if self.scheme == "view-source":
-            self.parse_http(new_url)
+            self.parse_http(self.new_url)
 
         self.response_cache = {}
         self.redirects = 0
@@ -47,6 +48,9 @@ class URL:
 
     def request(self) -> str:
         body = ""
+        if self.scheme == "about":
+            if self.new_url == "blank":
+                return body
         if self.scheme == "file":
             try:
                 with open(self.path) as f:

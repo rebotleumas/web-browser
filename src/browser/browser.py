@@ -81,15 +81,16 @@ class Browser:
 
     def draw(self):
         self.canvas.delete("all")
-        for i, (x, y, c) in enumerate(self.display_list):
-            if y > self.height + self.scroll:
-                continue
-            if y < self.scroll:
-                continue
-            self.canvas.create_text(x, y - self.scroll, text=c)
+        if len(self.display_list) > 0:
+	        for i, (x, y, c) in enumerate(self.display_list):
+	            if y > self.height + self.scroll:
+	                continue
+	            if y < self.scroll:
+	                continue
+	            self.canvas.create_text(x, y - self.scroll, text=c)
 
-        if self.display_list[-1][1] > self.height:
-            self.draw_scrollbar()
+	        if self.display_list[-1][1] > self.height:
+	            self.draw_scrollbar()
 
     def draw_scrollbar(self):
         bottom = self.display_list[-1][1]
@@ -133,5 +134,8 @@ if __name__ == "__main__":
     import sys
 
     browser = Browser()
-    browser.load(URL(sys.argv[1]))
+    try:
+    	browser.load(URL(sys.argv[1]))
+    except:
+    	browser.load(URL())
     tkinter.mainloop()
