@@ -1,25 +1,32 @@
 from URL import URL
 import tkinter
 
-WIDTH, HEIGHT = 800, 600
 HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 20
 NEW_LINE = 20
 
 class Browser:
     def __init__(self):
+        self.width, self.height = 800, 600
         self.entities = {"lt": "<", "gt": ">"}
         self.window = tkinter.Tk()
         self.canvas = tkinter.Canvas(
             self.window,
-            width=WIDTH,
-            height=HEIGHT
+            width=self.width,
+            height=self.height
         )
         self.canvas.pack()
         self.scroll = 0
         self.window.bind("<Down>", self.scrolldown)
         self.window.bind("<Up>", self.scrollup)
         self.window.bind("<MouseWheel>", self.handle_mousewheel)
+        self.window.bind("<Configure>", self.resize)
+
+    def resize(self, e):
+    	self.canvas.pack(fill=tkinter.BOTH, expand=1)
+    	self.width, self.height = e.width, e.height
+    	self.display_list = self.layout(self.text)
+    	self.draw()
 
     def scrolldown(self, e):
     	self.scroll += SCROLL_STEP
@@ -65,14 +72,14 @@ class Browser:
 
     def load(self, url):
         body = url.request()
-        text = self.lex(body)
-        self.display_list = self.layout(text)
+        self.text = self.lex(body)
+        self.display_list = self.layout(self.text)
         self.draw()
 
     def draw(self):
     	self.canvas.delete("all")
     	for x, y, c in self.display_list:
-    	    if y - self.scroll > HEIGHT: continue
+    	    if y - self.scroll > self.height: continue
     	    if y < VSTEP - self.scroll: continue
     	    self.canvas.create_text(x, y - self.scroll , text=c)
 
@@ -87,7 +94,7 @@ class Browser:
                 cursor_x = HSTEP
                 cursor_y += NEW_LINE
 
-            if cursor_x >= WIDTH - HSTEP:
+            if cursor_x >= self.width - HSTEP:
                 cursor_y += VSTEP
                 cursor_x = HSTEP
 
