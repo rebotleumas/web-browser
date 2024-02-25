@@ -81,7 +81,6 @@ class Browser:
 
     def draw(self):
         self.canvas.delete("all")
-        bottom = self.display_list[-1][1]
         for i, (x, y, c) in enumerate(self.display_list):
             if y > self.height + self.scroll:
                 continue
@@ -89,21 +88,27 @@ class Browser:
                 continue
             self.canvas.create_text(x, y - self.scroll, text=c)
 
+        if self.display_list[-1][1] > self.height:
+            self.draw_scrollbar()
+
+    def draw_scrollbar(self):
+        bottom = self.display_list[-1][1]
         self.canvas.create_rectangle(
-            self.width - 5,
+            self.width - 10,
             0,
-            self.width - 5,
+            self.width,
             self.display_list[-1][1],
             width=10,
-            outline="green"
+            outline="blue"
         )
+
         self.canvas.create_rectangle(
-            self.width - 2.5,
+            self.width - 10,
             ((self.scroll) / bottom) * self.height,
-            self.width - 5,
+            self.width,
             ((self.scroll + self.height) / bottom) * self.height,
-            width=5,
-            outline="red"
+            width = 10,
+            outline="black"
         )
 
     def layout(self, text):
