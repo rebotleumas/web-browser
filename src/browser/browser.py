@@ -1,10 +1,12 @@
 from URL import URL
+from Tag import Tag
+from Text import Text
+from Layout import Layout
+
 import tkinter
+import tkinter.font
 
-HSTEP, VSTEP = 13, 18
 SCROLL_STEP = 20
-NEW_LINE = 20
-
 
 class Browser:
     def __init__(self):
@@ -22,7 +24,7 @@ class Browser:
     def resize(self, e):
         self.canvas.pack(fill=tkinter.BOTH, expand=1)
         self.width, self.height = e.width, e.height
-        self.display_list = self.layout(self.text)
+        self.display_list = Layout(self.tokens).display_list
         self.draw()
 
     def scrolldown(self, e):
@@ -40,15 +42,17 @@ class Browser:
         self.scroll += e.delta
         bottom = self.display_list[-1][1]
         if e.delta < 0:
-        	self.scroll = max(self.scroll, 0)
+            self.scroll = max(self.scroll, 0)
         else:
-        	self.scroll = min(self.scroll, bottom - self.height)
+            self.scroll = min(self.scroll, bottom - self.height)
         self.draw()
 
     def lex(self, body):
-        text = ""
+        out = []
+        buffer = ""
         in_tag = False
         idx = 0
+
         while idx < len(body):
             char = body[idx]
 
@@ -59,38 +63,45 @@ class Browser:
                     entity += body[idx]
                     idx += 1
                     if idx >= len(body):
-                        text += entity
+                        out.append(Text(entity))
                         break
                 if entity in self.entities:
-                    text += self.entities[entity]
+                    out.append(Text(self.entities[entity]))
             elif char == "<":
                 in_tag = True
+                if buffer: out.append(Text(buffer))
+                buffer = ""
             elif char == ">":
                 in_tag = False
-            elif not in_tag:
-                text += char
+                out.append(Tag(buffer))
+                buffer = ""
+            else:
+                buffer += char
             idx += 1
 
-        return text
+        if not in_tag and buffer:
+            out.append(Text(buffer))
+
+        return out
 
     def load(self, url):
         body = url.request()
-        self.text = self.lex(body)
-        self.display_list = self.layout(self.text)
+        self.tokens = self.lex(body)
+        self.display_list = Layout(self.tokens).display_list
         self.draw()
 
     def draw(self):
         self.canvas.delete("all")
         if len(self.display_list) > 0:
-	        for i, (x, y, c) in enumerate(self.display_list):
-	            if y > self.height + self.scroll:
-	                continue
-	            if y < self.scroll:
-	                continue
-	            self.canvas.create_text(x, y - self.scroll, text=c)
+            for i, (x, y, c, font) in enumerate(self.display_list):
+                if y > self.height + self.scroll:
+                    continue
+                if y < self.scroll:
+                    continue
+                self.canvas.create_text(x, y - self.scroll, text=c, anchor="nw", font=font)
 
-	        if self.display_list[-1][1] > self.height:
-	            self.draw_scrollbar()
+            if self.display_list[-1][1] > self.height:
+                self.draw_scrollbar()
 
     def draw_scrollbar(self):
         bottom = self.display_list[-1][1]
@@ -112,30 +123,12 @@ class Browser:
             outline="black"
         )
 
-    def layout(self, text):
-        cursor_x, cursor_y = HSTEP, VSTEP
-        display_list = []
-        for char in text:
-            display_list.append((cursor_x, cursor_y, char))
-
-            cursor_x += HSTEP
-            if char == "\n":
-                cursor_x = HSTEP
-                cursor_y += NEW_LINE
-
-            if cursor_x >= self.width - HSTEP:
-                cursor_y += VSTEP
-                cursor_x = HSTEP
-
-        return display_list
-
-
 if __name__ == "__main__":
     import sys
 
     browser = Browser()
     try:
-    	browser.load(URL(sys.argv[1]))
-    except:
-    	browser.load(URL())
+        browser.load(URL(sys.argv[1]))
+    except E:
+        browser.load(URL())
     tkinter.mainloop()
