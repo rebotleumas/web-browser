@@ -17,8 +17,11 @@ class Layout:
 		self.style = "roman"
 		self.size = 16
 
+		self.line = []
+
 		for token in tokens: 
 			self.token(token)
+		self.flush()
 
 	def token(self, token):
 		if isinstance(token, Text):
@@ -26,13 +29,26 @@ class Layout:
 			for word in words:
 				self.word(word)
 		elif token.tag == "i":
-			style = "italic"
+			self.style = "italic"
 		elif token.tag == "/i":
-			style = "roman"
+			self.style = "roman"
 		elif token.tag == "b":
-			weight = "bold"
+			self.weight = "bold"
 		elif token.tag == "/b":
-			weight = "normal"
+			self.weight = "normal"
+		elif token.tag == "small":
+			self.size -= 2
+		elif token.tag == "/small":
+			self.size += 2
+		elif token.tag == "big":
+			self.size += 4
+		elif token.tag == "/big":
+			self.size -= 4
+		elif token.tag == "br":
+			self.flush()
+		elif token.tag == "/p":
+			self.flush()
+			self.cursor_y += VSTEP
 
 	def word(self, word):
 		font = tkinter.font.Font(
@@ -42,13 +58,29 @@ class Layout:
 		)
 
 		self.cursor_x += HSTEP
+
+		w = font.measure(word)
+
+		if self.cursor_x + w > self.width - HSTEP:
+			self.flush()
+
 		if word == "\n":
 			self.cursor_x = HSTEP
 			self.cursor_y += NEW_LINE
 
-		w = font.measure(word)
-		if self.cursor_x + w > self.width - HSTEP:
-				self.cursor_y += font.metrics("linespace") * 1.25
-				self.cursor_x = HSTEP
-		self.display_list.append((self.cursor_x, self.cursor_y, word, font))
+		self.line.append((self.cursor_x, word, font))
 		self.cursor_x += w + font.measure(" ")
+
+	def flush(self):
+		if not self.line: return
+		max_ascent = max([font.metrics("ascent") for x, word, font in self.line])
+		max_descent = max([font.metrics("descent") for x, word, font in self.line])
+		baseline = self.cursor_y + 1.25*max_ascent
+
+		for x, word, font in self.line:
+			y = baseline - font.metrics("ascent")
+			self.display_list.append((x, y, word, font))
+
+		self.cursor_y = baseline + 1.25*max_descent
+		self.cursor_x = HSTEP
+		self.line = []
