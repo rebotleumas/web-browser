@@ -18,6 +18,7 @@ class Layout:
 		self.size = 16
 
 		self.line = []
+		self.font_cache = {}
 
 		for token in tokens: 
 			self.token(token)
@@ -49,16 +50,17 @@ class Layout:
 		elif token.tag == "/p":
 			self.flush()
 			self.cursor_y += VSTEP
+		elif "h1" in token.tag:
+			self.center()
+			#self.size += 8
+		elif token.tag == "/h1":
+			self.flush()
+		elif token.tag == "/div":
+			self.flush()
 
 	def word(self, word):
-		font = tkinter.font.Font(
-			size=self.size,
-			weight=self.weight,
-			slant=self.style,
-		)
-
+		font = self.get_font(self.size, self.weight, self.style)
 		self.cursor_x += HSTEP
-
 		w = font.measure(word)
 
 		if self.cursor_x + w > self.width - HSTEP:
@@ -71,6 +73,19 @@ class Layout:
 		self.line.append((self.cursor_x, word, font))
 		self.cursor_x += w + font.measure(" ")
 
+	def get_font(self, size, weight, slant):
+		key = (size, weight, slant)
+		if key not in self.font_cache:
+			font = tkinter.font.Font(
+				size=size,
+				weight=weight,
+				slant=slant,
+			)
+			label = tkinter.Label(font=font)
+			self.font_cache[key] = (font, label)
+
+		return self.font_cache[key][0]
+
 	def flush(self):
 		if not self.line: return
 		max_ascent = max([font.metrics("ascent") for x, word, font in self.line])
@@ -82,5 +97,18 @@ class Layout:
 			self.display_list.append((x, y, word, font))
 
 		self.cursor_y = baseline + 1.25*max_descent
+		self.cursor_x = HSTEP
+		self.line = []
+
+	def center(self):
+		if not self.line: return
+		line_length = sum([font.measure(word) for x, word, font in self.line])
+		center = self.width / 2
+		line_start = center - (line_length / 2) - 2*HSTEP
+
+		for x, word, font in self.line:
+			print(x, word)
+			self.display_list.append((x + line_start, self.cursor_y, word, font))
+
 		self.cursor_x = HSTEP
 		self.line = []

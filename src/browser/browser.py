@@ -56,7 +56,7 @@ class Browser:
         while idx < len(body):
             char = body[idx]
 
-            if char == "&":
+            if char == "&" and not in_tag:
                 entity = ""
                 idx += 1
                 while body[idx] != ";":
